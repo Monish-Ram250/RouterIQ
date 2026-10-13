@@ -11,8 +11,10 @@ RouteIQ is a cost-aware LLM routing system. Given a prompt, a trained **Residual
 | Resource | Link |
 |---|---|
 | 🎥 **Demo video** | [Watch on Google Drive](https://drive.google.com/file/d/1Xdh1CRo1Aejy67GSjEUA7UYQjT1lq-7C/view?usp=sharing) |
-|
+
 > **Note:** the demo video shows the application **running locally**. A public cloud deployment is **not currently available**.
+>
+> **Why no public deployment?** The project's model artifacts and dependencies (PyTorch, Sentence Transformers and the trained weights) need more storage than the free tiers of platforms such as Hugging Face Spaces, Render and Vercel provide, so the app has not been deployed to them.
 
 ---
 
@@ -394,7 +396,7 @@ Then open `http://127.0.0.1:5000/` in a browser.
 - **Estimated versus actual cost.** Real provider costs can differ because of current pricing, token counts, retries, and embedding or network overhead.
 - **Ordering and configuration dependence.** A mismatch in candidate order, `cost_values` or `cost_normalization_max` silently produces wrong routing.
 - **`alpha` tuning.** The sweep is reported on the test split; `alpha` should be selected on validation data.
-- **No public deployment.** There is no deployed public API; the demo runs locally.
+- **No public deployment.** There is no deployed public API; the demo runs locally. The model artifacts and dependencies require more storage than the free tiers of Hugging Face Spaces, Render and Vercel allow, so the project has not been deployed there. A paid tier, a smaller or optimized artifact, or other hosting would be needed.
 - **Not production-validated.** Real-world latency, response quality and actual cost have not been evaluated.
 
 ### Future work
@@ -405,7 +407,7 @@ Then open `http://127.0.0.1:5000/` in a browser.
 - **Stronger routing evaluation**: baselines such as kNN and published RouterBench routers, calibration analysis, and leave-one-task-out generalization
 - **Better quality-aware constraints**, for example a minimum quality target when choosing `alpha`
 - **Latency tracking** per candidate
-- **Deployment** with a documented, secured public API
+- **Deployment** with a documented, secured public API, for example by reducing artifact size or using hosting with enough storage
 
 ---
 
