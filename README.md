@@ -11,8 +11,6 @@ RouteIQ is a cost-aware LLM routing system. Given a prompt, a trained **Residual
 | Resource | Link |
 |---|---|
 | 🎥 **Demo video** | [Watch on Google Drive](https://drive.google.com/file/d/1Xdh1CRo1Aejy67GSjEUA7UYQjT1lq-7C/view?usp=sharing) |
-| 💻 **GitHub repository** | `[INSERT GITHUB REPOSITORY URL]` |
-| 📄 **Project report** | `[OPTIONAL REPORT LINK]` |
 
 > **Note:** the demo video shows the application **running locally**. A public cloud deployment is **not currently available**.
 
