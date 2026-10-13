@@ -11,7 +11,7 @@ RouteIQ is a cost-aware LLM routing system. Given a prompt, a trained **Residual
 | Resource | Link |
 |---|---|
 | 🎥 **Demo video** | [Watch on Google Drive](https://drive.google.com/file/d/1Xdh1CRo1Aejy67GSjEUA7UYQjT1lq-7C/view?usp=sharing) |
-
+|
 > **Note:** the demo video shows the application **running locally**. A public cloud deployment is **not currently available**.
 
 ---
@@ -22,7 +22,7 @@ RouteIQ is a cost-aware LLM routing system. Given a prompt, a trained **Residual
 2. [Architecture](#2-architecture)
 3. [Candidate Models](#3-candidate-models)
 4. [Training Setup](#4-training-setup)
-5. [Experimental Results](#5-experimental-results)
+5. [Cost Efficiency, Routing Quality & Oracle Comparison](#5-cost-efficiency-routing-quality--oracle-comparison)
 6. [Cost Configuration](#6-cost-configuration)
 7. [Dashboard and API](#7-dashboard-and-api)
 8. [Technology Stack](#8-technology-stack)
@@ -141,39 +141,59 @@ Summarized from the training notebook.
 
 ---
 
-## 5. Experimental Results
+## 5. Cost Efficiency, Routing Quality & Oracle Comparison
 
-Evaluated on the **10,950-prompt held-out test split**. Quality and cost are the values **recorded in RouterBench** for the model the router selects. Cost units follow the dataset and are not live provider prices.
+All results below come from RouteIQ's **held-out RouterBench test set of 10,950 prompts**. Quality and cost are the values **recorded in RouterBench** for whichever candidate the router selects. Costs are in the dataset's cost units, not live provider prices.
 
-| Alpha | Router Quality | Oracle Quality | Quality Regret | Cost per 1000 Prompts | Evaluated Prompts | Savings vs GPT-4 (%) |
-|---:|---:|---:|---:|---:|---:|---:|
-| 0.0 | 0.6271 | 0.9134 | 0.2863 | 0.3847 | 10950 | 88.229897 |
-| 0.1 | 0.6252 | 0.9134 | 0.2882 | 0.3728 | 10950 | 88.593399 |
-| 0.2 | 0.6237 | 0.9134 | 0.2897 | 0.3597 | 10950 | 88.993301 |
-| 0.3 | 0.6225 | 0.9134 | 0.2908 | 0.3473 | 10950 | 89.374802 |
-| 0.5 | 0.6196 | 0.9134 | 0.2938 | 0.3302 | 10950 | 89.895599 |
-| 0.7 | 0.6172 | 0.9134 | 0.2962 | 0.3114 | 10950 | 90.472603 |
-| 1.0 | 0.6139 | 0.9134 | 0.2995 | 0.2902 | 10950 | 91.119904 |
+### Key results at the current configuration (alpha = 0.7)
 
-**Definitions**
+| 💰 Recorded cost savings | 🎯 RouteIQ mean quality | 🏆 Fixed GPT-4 Turbo quality |
+|:---:|:---:|:---:|
+| **90.47%** vs always GPT-4 Turbo | **0.6172** | **0.7819** |
 
-- **Oracle Quality:** the best recorded quality per prompt, chosen with hindsight. It is an upper bound, not a deployable system.
-- **Quality Regret:** mean of (oracle quality − router quality) per prompt.
-- **Savings vs GPT-4:** reduction in recorded cost per 1000 prompts relative to always using `gpt-4-1106-preview`. It measures **cost only**, not quality.
+| 🔮 Oracle quality | 📉 Quality regret | 💵 Cost per 1,000 prompts |
+|:---:|:---:|:---:|
+| **0.9134** (offline upper bound) | **0.2962** vs oracle | **0.3114** RouteIQ vs **3.2683** fixed GPT-4 Turbo |
 
-### The quality–cost trade-off
+| Strategy | Mean Quality | Cost per 1,000 Prompts |
+|---|---:|---:|
+| RouteIQ (alpha 0.7) | 0.6172 | 0.3114 |
+| Fixed GPT-4 Turbo (`gpt-4-1106-preview`) | 0.7819 | 3.2683 |
+| Oracle (offline upper bound) | 0.9134 | not applicable |
 
-- Increasing `alpha` increases the cost penalty.
-- In these experiments, higher `alpha` **reduces measured routing cost** (0.3847 → 0.2902 per 1000 prompts) and **increases savings** (88.23% → 91.12%).
-- **Router quality falls** as `alpha` rises (0.6271 → 0.6139) and quality regret grows (0.2863 → 0.2995).
-- From `alpha` 0.0 to 1.0, recorded cost drops by about 24.6% while mean quality drops by about 0.0132.
-- `alpha = 0.7` is the **currently configured policy value**. Among the tested values, `alpha = 1.0` gives the **greatest savings**, but also the lowest quality.
+### What these results mean
 
-**Higher savings does not automatically mean better routing.** The savings figure ignores quality, and quality is what suffers. The right `alpha` depends on an explicit quality floor or budget, and should be chosen on **validation** data rather than by picking the best-looking test-set number. In this README the `alpha` sweep is reported on the test split for transparency, so treat it as descriptive.
+**RouteIQ is substantially more cost-efficient in this experiment.** It reduces recorded benchmark cost by approximately **90.47%** relative to always selecting GPT-4 Turbo (0.3114 versus 3.2683 per 1,000 prompts).
+
+**That efficiency comes with lower quality.** RouteIQ's mean quality of **0.6172** is below GPT-4 Turbo's **0.7819** and far below the oracle's **0.9134**. RouteIQ should therefore **not** be described as preserving GPT-4-level quality. It is better read as a cost-efficiency result with a clear quality trade-off.
+
+**What the oracle is.** The oracle is an **offline upper-bound reference**. For each prompt it selects the highest-quality candidate using the recorded benchmark outcomes. It is **not a deployable model-selection strategy**, because it relies on knowing the outcomes in advance.
+
+**What the savings are.** The savings measure **recorded benchmark cost**. They are not guaranteed real-world savings and do not reflect live provider prices. RouteIQ currently **selects** a candidate model but does **not call** that model to generate an answer.
+
+**Quality regret** is the mean per-prompt difference between oracle quality and router quality (0.9134 − 0.6172 = 0.2962 at alpha 0.7). Together with the gap to GPT-4 Turbo, it marks meaningful room for improvement in how well the router identifies suitable models.
+
+### Complete alpha comparison
+
+| Alpha | Router Quality | Oracle Quality | Quality Regret | Cost per 1,000 Prompts | Savings vs GPT-4 |
+|---:|---:|---:|---:|---:|---:|
+| 0.0 | 0.6271 | 0.9134 | 0.2863 | 0.3847 | 88.23% |
+| 0.1 | 0.6252 | 0.9134 | 0.2882 | 0.3728 | 88.59% |
+| 0.2 | 0.6237 | 0.9134 | 0.2897 | 0.3597 | 88.99% |
+| 0.3 | 0.6225 | 0.9134 | 0.2908 | 0.3473 | 89.37% |
+| 0.5 | 0.6196 | 0.9134 | 0.2938 | 0.3302 | 89.90% |
+| **0.7** (current) | **0.6172** | 0.9134 | **0.2962** | **0.3114** | **90.47%** |
+| 1.0 | 0.6139 | 0.9134 | 0.2995 | 0.2902 | 91.12% |
+
+Every row was evaluated on the same 10,950 test prompts.
+
+**Reading the trend.** Increasing alpha strengthens the cost penalty. In the observed evaluation, that **reduces routing cost** (0.3847 → 0.2902 per 1,000 prompts) and **increases savings** (88.23% → 91.12%), but it also **decreases router quality** (0.6271 → 0.6139) and **increases quality regret** (0.2863 → 0.2995).
+
+**Choosing alpha.** Alpha = 0.7 is the **currently configured setting**. Alpha = 1.0 gives the **largest savings among the tested values**, at the cost of the lowest measured quality. Neither is universally optimal. The right value depends on how much quality loss is acceptable for a given budget.
 
 ```mermaid
 xychart-beta
-    title "Router quality vs alpha"
+    title "Router quality vs alpha (higher is better)"
     x-axis "alpha" [0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0]
     y-axis "Mean quality" 0.60 --> 0.64
     line [0.6271, 0.6252, 0.6237, 0.6225, 0.6196, 0.6172, 0.6139]
@@ -181,26 +201,18 @@ xychart-beta
 
 ```mermaid
 xychart-beta
-    title "Cost per 1000 prompts vs alpha"
+    title "Cost per 1,000 prompts vs alpha (lower is cheaper)"
     x-axis "alpha" [0.0, 0.1, 0.2, 0.3, 0.5, 0.7, 1.0]
     y-axis "Cost (dataset units)" 0.25 --> 0.40
     line [0.3847, 0.3728, 0.3597, 0.3473, 0.3302, 0.3114, 0.2902]
 ```
 
-### Context from the evaluation notebook (alpha = 0.7)
+### Interpretation and limitations
 
-These figures come from the project's own evaluation notebook and are included for an honest reading of the results.
-
-| Strategy | Mean Quality | Cost per 1000 Prompts |
-|---|---:|---:|
-| RouteIQ (alpha 0.7) | 0.6172 | 0.3114 |
-| Fixed `gpt-4-1106-preview` | 0.7819 | 3.2683 |
-| Oracle (upper bound) | 0.9134 | n/a |
-
-- RouteIQ cuts recorded cost by about 90.47% versus always using GPT-4, but its **mean quality (0.6172) is lower than the fixed GPT-4 baseline (0.7819)**. RouteIQ should **not** be described as preserving GPT-4-level quality.
-- Quality regret versus the oracle is 0.2962, which indicates substantial room for improvement.
-- Selection shares at alpha 0.7: Code Llama 34B 24.63%, Mixtral 8x7B 18.28%, Yi-34B 16.61%, Llama 2 70B 15.44%, GPT-4 Turbo 12.54%, Mistral 7B 11.41%; the remaining candidates are each under 1%.
-- Code Llama 34B is selected most often even though it has the lowest mean quality among the individual candidates. This suggests the predicted suitability scores are not yet well aligned with actual candidate quality (see [Limitations](#10-limitations-and-future-improvements)).
+- **An engineering trade-off, not a free win.** Large cost reductions come with a quality gap versus GPT-4 Turbo and a large regret versus the oracle. Higher savings does not automatically mean better routing, because the savings figure ignores quality.
+- **Alpha selection.** Alpha should ideally be chosen on **validation data** against an explicit quality or budget target, rather than picked from test-set results. The sweep above is reported on the test set for transparency, so treat it as descriptive.
+- **Scope of evidence.** These measurements reflect this project's own evaluation on RouterBench. They are **not independent proof** of performance on arbitrary real-world prompts, and real latency, response quality and actual provider cost have not been evaluated.
+- **Diagnostic finding (alpha = 0.7).** Code Llama 34B is selected most often (24.63%) even though it has the lowest mean quality among the individual candidates. Other shares: Mixtral 8x7B 18.28%, Yi-34B 16.61%, Llama 2 70B 15.44%, GPT-4 Turbo 12.54%, Mistral 7B 11.41%; the remaining candidates are each under 1%. This suggests the predicted suitability scores are not yet well aligned with actual candidate quality, which is a priority for future work (see [Limitations](#10-limitations-and-future-improvements)).
 
 ---
 
